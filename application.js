@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
   // event listeners
   // add item on enter
   var addItemInput = document.getElementById(ADD_ITEM_INPUT_ID);
-  addItemInput.addEventListener('keypress', addItemOnEnter);
+  addItemInput.addEventListener('keydown', addItemOnEnter);
   // ignore click
   var linksWhichShouldBeIgnored = document.getElementsByClassName(IGNORE_CLICK_CLASS);
   for (var i = 0; i < linksWhichShouldBeIgnored.length; i++) {
@@ -98,8 +98,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
     var itemInput = this.parentNode.getElementsByClassName(EDIT_ITEM_CLASS)[0];
     var oldValue = itemTextNode.innerText;
     itemInput.value = oldValue;
-    itemInput.addEventListener('keypress', updateItemOnEnter);
-    itemInput.addEventListener('keypress', discardItemChangesOnEscape);
+    itemInput.addEventListener('keydown', updateItemOnEnter);
+    itemInput.addEventListener('keydown', discardItemChangesOnEscape);
 
     hideElement(itemTextNode);
     showElement(itemInput);
