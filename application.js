@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
     if(event.which == KEYCODE_ENTER) {
       if(this.value == '') return false;
       addItem();
-      // clear inout
+      // clear input
       addItemInput.value = '';
     }
   }
