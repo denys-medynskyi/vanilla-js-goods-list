@@ -2,21 +2,21 @@
 <html>
 <head>
 <title>Goods</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css" />
 <link rel="stylesheet" href="application.css" />
 <script src="application.js"></script>
 </head>
 <body>
-  <input type='checkbox' class="js-toggle-all"/>
-  <input id="add-item" placeholder="Enter item name">
-  <a href class='ignore-click js-clear-all'>x</a>
-  <hr />
-  <ul id="goods-list">
-    <li class="hidden list-item" id="list-item-example">
-      <input class="mark-item" type='checkbox'/>
-      <input class="edit-item hidden">
-      <span class="item-content"></span>
-      <a href class='delete-item ignore-click'>x</a>
-    </li>
-  </ul>
+  <div class="site">
+    <section class="content shadow">
+      <input type='checkbox' class="js-toggle-all" name="toggle-all"/>
+      <label name="toggle-all">Mark all</label>
+      <input id="add-item" placeholder="Enter item name" class="shadow">
+      <a href class='ignore-click js-clear-all'>Delete all</a>
+      <hr />
+      <ul id="goods-list">
+      </ul>
+    </section>
+  </div>
 </body>
 </html>
