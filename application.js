@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
   // event listeners
   // add item on enter
   var addItemInput = document.getElementById(ADD_ITEM_INPUT_ID);
-  addItemInput.addEventListener('keypress', addItemOnEnter);
+  addItemInput.addEventListener('keydown', addItemOnEnter);
   // ignore click
   var linksWhichShouldBeIgnored = document.getElementsByClassName(IGNORE_CLICK_CLASS);
   for (var i = 0; i < linksWhichShouldBeIgnored.length; i++) {
@@ -52,9 +52,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
   function addItem(value) {
     var itemExample = document.getElementById(ITEM_EXAMPLE_ID);
-    var newItem = itemExample.cloneNode(true);
+    var newItem = createItemHtml();
     // prepare element for inserting
-    newItem.id = '';
     newItem.getElementsByTagName('span')[0].innerText = value || addItemInput.value;
     showElement(newItem);
 
@@ -70,14 +69,21 @@ document.addEventListener("DOMContentLoaded", function(event) {
     // add element into the list
     var goodsItemsContainer = document.getElementById(GOODS_CONTAINER_ID);
     goodsItemsContainer.appendChild(newItem);
+
+    function createItemHtml() {
+      var liElement = document.createElement('li');
+      liElement.classList.add(ITEM_CLASS);
+      liElement.innerHTML = '<input class="mark-item" type="checkbox"/>\
+           <span class="item-content"></span>\
+           <a href class="delete-item ignore-click">x</a>';
+      return liElement;
+    }
   }
 
   function clearList() {
-    var itemExampleCopy = document.getElementById(ITEM_EXAMPLE_ID).cloneNode(true);
     var goodsItemsContainer = document.getElementById(GOODS_CONTAINER_ID);
     var items = goodsItemsContainer.getElementsByClassName(ITEM_CLASS);
     goodsItemsContainer.innerHTML = '';
-    goodsItemsContainer.appendChild(itemExampleCopy);
   }
 
   function toggleList() {
@@ -95,18 +101,20 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
   function enableEditItem() {
     var itemTextNode = this;
-    var itemInput = this.parentNode.getElementsByClassName(EDIT_ITEM_CLASS)[0];
-    var oldValue = itemTextNode.innerText;
-    itemInput.value = oldValue;
-    itemInput.addEventListener('keypress', updateItemOnEnter);
-    itemInput.addEventListener('keypress', discardItemChangesOnEscape);
+    var editItemInput = createEditItemNode();
+    editItemInput.value = itemTextNode.innerText;
+
+    editItemInput.addEventListener('keydown', updateItemOnEnter);
+    editItemInput.addEventListener('keydown', discardItemChangesOnEscape);
+
+    itemTextNode.parentNode.insertBefore(editItemInput, itemTextNode);
 
     hideElement(itemTextNode);
-    showElement(itemInput);
+    showElement(editItemInput);
 
     function discardItemChangesOnEscape(event) {
       if(event.which == KEYCODE_ESC) {
-        hideElement(itemInput);
+        hideElement(editItemInput);
         showElement(itemTextNode);
       }
     }
@@ -114,9 +122,16 @@ document.addEventListener("DOMContentLoaded", function(event) {
     function updateItemOnEnter(event) {
       if(event.which == KEYCODE_ENTER) {
         itemTextNode.innerText = this.value;
-        hideElement(itemInput);
+        hideElement(editItemInput);
         showElement(itemTextNode);
       }
+    }
+
+    function createEditItemNode() {
+      var editItemNode = document.createElement('input');
+      editItemNode.classList.add(EDIT_ITEM_CLASS);
+      editItemNode.classList.add('hidden');
+      return editItemNode;
     }
   }
 
