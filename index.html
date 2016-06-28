@@ -8,12 +8,14 @@
 </head>
 <body>
   <div class="site">
-    <section class="content shadow">
-      <input type='checkbox' class="js-toggle-all" name="toggle-all"/>
-      <label name="toggle-all">Mark all</label>
-      <input id="add-item" placeholder="Enter item name" class="shadow">
-      <a href class='ignore-click js-clear-all'>Delete all</a>
-      <hr />
+    <section class="content">
+      <div class="top">
+        <input type='checkbox' class="js-toggle-all" name="toggle-all"/>
+        <label name="toggle-all">Mark all</label>
+        <input id="add-item" placeholder="Enter item name" required>
+        <a href class='ignore-click js-clear-all'>Delete all</a>
+        <hr />
+      </div>
       <ul id="goods-list">
       </ul>
     </section>

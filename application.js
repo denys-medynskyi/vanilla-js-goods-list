@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
   var DELETE_ALL_CLASS = 'js-clear-all';
   var DELETE_ITEM_CLASS = 'delete-item';
   var EDIT_ITEM_CLASS = 'edit-item';
+  var HIDDEN_CLASS = 'hidden';
   var GOODS_CONTAINER_ID = 'goods-list';
   var IGNORE_CLICK_CLASS = 'ignore-click';
   var ITEM_EXAMPLE_ID = 'list-item-example';
@@ -13,12 +14,17 @@ document.addEventListener("DOMContentLoaded", function(event) {
   var KEYCODE_ESC = 27;
   var MARKER_CLASS = 'mark-item';
   var TOGGLE_ALL_CLASS = 'js-toggle-all';
-  //
+
+  var GOODS_CONTAINER = document.getElementById(GOODS_CONTAINER_ID);
+  var TOGGLE_ALL_CHECKBOX = document.getElementsByClassName(TOGGLE_ALL_CLASS)[0];
+  var ITEM_CHECKBOXES = GOODS_CONTAINER.getElementsByClassName(MARKER_CLASS);
+  var EDIT_ITEM_INPUTS = document.getElementsByClassName(EDIT_ITEM_CLASS);
+  var CONTENT_ELEMENTS = document.getElementsByClassName(ITEM_CONTENT_CLASS);
+
   // add existing items into list
-  var goods = ['apples', 'cucumbers'];
-  for (var i = 0; i < goods.length; i++) {
-    addItem(goods[i]);
-  }
+  goodsFromLocalStorage().forEach(function(item) {
+    addHtmlItem(item);
+  });
 
   // event listeners
   // add item on enter
@@ -26,21 +32,35 @@ document.addEventListener("DOMContentLoaded", function(event) {
   addItemInput.addEventListener('keydown', addItemOnEnter);
   // ignore click
   var linksWhichShouldBeIgnored = document.getElementsByClassName(IGNORE_CLICK_CLASS);
-  for (var i = 0; i < linksWhichShouldBeIgnored.length; i++) {
-    ignoreClickLister(linksWhichShouldBeIgnored[i]);
-  }
-  // clear list
-  document.getElementsByClassName(DELETE_ALL_CLASS)[0].addEventListener('click', clearList);
+  Array.prototype.forEach.call(linksWhichShouldBeIgnored, function(link) {
+    ignoreClickLister(link);
+  });
+  // deletete selected
+  document.getElementsByClassName(DELETE_ALL_CLASS)[0].addEventListener('click', deleteSelected);
   // mark whole list
-  document.getElementsByClassName(TOGGLE_ALL_CLASS)[0].addEventListener('click', toggleList);
+  TOGGLE_ALL_CHECKBOX.addEventListener('click', toggleAllList);
+  // when click is performed outside the box - cancel editing
+  document.body.addEventListener('click', function(event){
+    var result = Array.prototype.find.call(event.target.classList, function(className) {
+      return className === EDIT_ITEM_CLASS;
+    });
+    if(!result) {
+      cancelCurrentEditInputs();
+    }
+  });
 
 
   function addItemOnEnter(event) {
     if(event.which == KEYCODE_ENTER) {
-      if(this.value == '') return false;
-      addItem();
+      if(this.value.trim() === '') {
+        this.value = '';
+        return false;
+      }
+      var itemObject = createItemObject(this.value);
+      addHtmlItem(itemObject);
+      addItemToLocalStorage(itemObject);
       // clear input
-      addItemInput.value = '';
+      this.value = '';
     }
   }
 
@@ -50,59 +70,103 @@ document.addEventListener("DOMContentLoaded", function(event) {
     });
   }
 
-  function addItem(value) {
-    var itemExample = document.getElementById(ITEM_EXAMPLE_ID);
-    var newItem = createItemHtml();
-    // prepare element for inserting
-    newItem.getElementsByTagName('span')[0].innerText = value || addItemInput.value;
-    showElement(newItem);
+  function addHtmlItem(itemObject) {
+    var newItem = document.createElement('li');
+    newItem.setAttribute('data-id', itemObject.id);
+    newItem.classList.add(ITEM_CLASS);
+    // checkbox
+    var checkboxElementContainer = document.createElement('div');
+    var checkboxElement = document.createElement('input');
+    checkboxElementContainer.classList.add('mark-item-container');
+    checkboxElement.classList.add('mark-item');
+    checkboxElement.type = 'checkbox';
+    checkboxElement.checked = itemObject.done;
+    checkboxElementContainer.appendChild(checkboxElement);
+    // content
+    var contentElement = document.createElement('span');
+    var contentElementContainer = document.createElement('div');
+    contentElementContainer.classList.add('item-content-container');
+    contentElement.classList.add('item-content');
+    contentElement.innerText = itemObject.value;
+
+    contentElementContainer.appendChild(contentElement);
+    // delete link
+    var deleteElement = document.createElement('a');
+    var deleteElementContainer = document.createElement('div');
+    deleteElementContainer.classList.add('delete-item-container');
+    deleteElement.innerText = 'x';
+    deleteElement.classList.add('delete-item');
+    deleteElement.classList.add(IGNORE_CLICK_CLASS);
+    deleteElementContainer.appendChild(deleteElement);
+    // add elements inside item
+    newItem.appendChild(checkboxElementContainer);
+    newItem.appendChild(contentElementContainer);
+    newItem.appendChild(deleteElementContainer);
 
     // add event listeners
+    ignoreClickLister(deleteElement);
+    checkboxElement.addEventListener('click', toggleAllMarker);
+    checkboxElement.addEventListener('click', toggleContentChecked);
 
-    // ignore click on delete
-    ignoreClickLister(newItem.getElementsByClassName('ignore-click')[0]);
-    // remove from list on delete
-    newItem.getElementsByClassName(DELETE_ITEM_CLASS)[0].addEventListener('click', deleteItem);
-    // edit on doubleclick
-    newItem.getElementsByClassName(ITEM_CONTENT_CLASS)[0].addEventListener('dblclick', enableEditItem);
+    var markItemDoneWithItemObject = markItemDone.bind(itemObject);
+    checkboxElement.addEventListener('click', markItemDoneWithItemObject);
 
-    // add element into the list
-    var goodsItemsContainer = document.getElementById(GOODS_CONTAINER_ID);
-    goodsItemsContainer.appendChild(newItem);
-
-    function createItemHtml() {
-      var liElement = document.createElement('li');
-      liElement.classList.add(ITEM_CLASS);
-      liElement.innerHTML = '<input class="mark-item" type="checkbox"/>\
-           <span class="item-content"></span>\
-           <a href class="delete-item ignore-click">x</a>';
-      return liElement;
-    }
+    deleteElement.addEventListener('click', deleteItem);
+    contentElement.addEventListener('dblclick', enableEditItem);
+    // add new item to the list
+    TOGGLE_ALL_CHECKBOX.checked = allChecked();
+    // add item to html
+    GOODS_CONTAINER.appendChild(newItem);
   }
 
-  function clearList() {
-    var goodsItemsContainer = document.getElementById(GOODS_CONTAINER_ID);
-    var items = goodsItemsContainer.getElementsByClassName(ITEM_CLASS);
-    goodsItemsContainer.innerHTML = '';
+  function deleteSelected() {
+    Array.prototype.forEach.call(ITEM_CHECKBOXES, function(itemCheckbox) {
+      if(itemCheckbox.checked) GOODS_CONTAINER.removeChild(itemCheckbox.parentNode.parentNode);
+    });
   }
 
-  function toggleList() {
-    var goodsItemsContainer = document.getElementById(GOODS_CONTAINER_ID);
-    var itemCheckboxes = goodsItemsContainer.getElementsByClassName(MARKER_CLASS);
-    for (var i = 0; i < itemCheckboxes.length; i++) {
-      itemCheckboxes[i].checked = this.checked;
+  function toggleAllList() {
+    var self = this;
+    var checked = self.checked;
+    if(checked) {
+      Array.prototype.forEach.call(CONTENT_ELEMENTS, function(contentElement) {
+        contentElement.classList.add('item-content-checked');
+      });
+    } else {
+      Array.prototype.forEach.call(CONTENT_ELEMENTS, function(contentElement) {
+        contentElement.classList.remove('item-content-checked');
+      });
     }
+
+    var toggledItems = goodsFromLocalStorage().map(function(itemObject) {
+      itemObject.done = checked;
+      return itemObject;
+    });
+
+    localStorage.goods = JSON.stringify(toggledItems);
+
+    Array.prototype.forEach.call(ITEM_CHECKBOXES, function(itemCheckbox) {
+      itemCheckbox.checked = checked;
+    });
   }
 
   function deleteItem() {
-    var goodsItemsContainer = document.getElementById(GOODS_CONTAINER_ID);
-    goodsItemsContainer.removeChild(this.parentNode);
+    var goods = goodsFromLocalStorage();
+    var itemId = this.parentNode.parentNode.getAttribute('data-id');
+    var itemIndex = goods.findIndex(function(lsItem) {
+      return lsItem.id === itemId;
+    });
+    goods.splice(itemIndex, 1);
+    localStorage.goods = JSON.stringify(goods);
+
+    GOODS_CONTAINER.removeChild(this.parentNode.parentNode);
   }
 
   function enableEditItem() {
     var itemTextNode = this;
     var editItemInput = createEditItemNode();
     editItemInput.value = itemTextNode.innerText;
+    editItemInput.type = 'text';
 
     editItemInput.addEventListener('keydown', updateItemOnEnter);
     editItemInput.addEventListener('keydown', discardItemChangesOnEscape);
@@ -121,7 +185,18 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
     function updateItemOnEnter(event) {
       if(event.which == KEYCODE_ENTER) {
-        itemTextNode.innerText = this.value;
+        if(this.value.trim() === '') {
+          this.value = '';
+          return false;
+        }
+        var itemObject = {
+          id: this.parentNode.parentNode.getAttribute('data-id'),
+          value: this.value
+        };
+
+        updateItemObjectInLocalStorage(itemObject);
+        itemTextNode.innerText = itemObject.value;
+
         hideElement(editItemInput);
         showElement(itemTextNode);
       }
@@ -130,16 +205,93 @@ document.addEventListener("DOMContentLoaded", function(event) {
     function createEditItemNode() {
       var editItemNode = document.createElement('input');
       editItemNode.classList.add(EDIT_ITEM_CLASS);
-      editItemNode.classList.add('hidden');
+      hideElement(editItemNode);
       return editItemNode;
     }
   }
 
   function hideElement(element) {
-    element.classList.add('hidden');
+    element.classList.add(HIDDEN_CLASS);
   }
 
   function showElement(element) {
-    element.classList.remove('hidden');
+    element.classList.remove(HIDDEN_CLASS);
   }
+
+  function allChecked() {
+    var goods = goodsFromLocalStorage();
+    if(goods.length) {
+      return goods.every(function(itemObject) {
+        return itemObject.done;
+      });
+    }
+  }
+
+  function toggleAllMarker() {
+    if(this.checked) {
+      if(allChecked()) TOGGLE_ALL_CHECKBOX.checked = true;
+    } else {
+      TOGGLE_ALL_CHECKBOX.checked = false;
+    }
+  }
+
+  function cancelCurrentEditInputs() {
+    Array.prototype.forEach.call(EDIT_ITEM_INPUTS, function(element){
+      hideElement(element);
+      showElement(element.parentNode.parentNode.getElementsByClassName(ITEM_CONTENT_CLASS)[0]);
+    });
+  }
+
+  function toggleContentChecked() {
+    var contentElement = this.parentNode.parentNode.getElementsByClassName(ITEM_CONTENT_CLASS)[0];
+    if(this.checked) {
+      contentElement.classList.add('item-content-checked');
+    } else {
+      contentElement.classList.remove('item-content-checked');
+    }
+  }
+
+  function addItemToLocalStorage(item) {
+    var goods;
+
+    if(localStorage.goods) {
+      goods = JSON.parse(localStorage.goods);
+    } else {
+      goods = [];
+    }
+    goods.push(item);
+    localStorage.goods = JSON.stringify(goods);
+  }
+
+  function createItemObject(value) {
+    return {id: generateId(), value: value, done: false};
+  }
+
+  function generateId() {
+    return Math.random().toString(36);
+  }
+
+  function goodsFromLocalStorage() {
+    if(localStorage.goods) {
+      return JSON.parse(localStorage.goods);
+    } {
+      return [];
+    }
+  }
+
+  function markItemDone() {
+    var itemObject = this;
+    itemObject.done = !itemObject.done;
+    updateItemObjectInLocalStorage(itemObject);
+  }
+
+  function updateItemObjectInLocalStorage(itemObject) {
+    var goods = goodsFromLocalStorage();
+    var itemIndex = goods.findIndex(function(lsItem) {
+      return lsItem.id === itemObject.id;
+    });
+    goods[itemIndex] = itemObject;
+    localStorage.goods = JSON.stringify(goods);
+  }
+
 });
